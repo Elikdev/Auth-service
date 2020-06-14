@@ -1,10 +1,22 @@
 const express = require('express');
-const config = require('./src/config/index');
-const dbConnection = require('./src/config/dbconfig');
+const config = require('./src/configs/index');
+const dbConnection = require('./src/configs/dbconfig');
+const authRoutes = require('./src/routes/auth.routes');
 const app = express();
 
 //connect to database
 dbConnection();
+
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
+app.get('/api/v1', (req, res) => {
+	res.status(200).json({
+		message: 'Welcome to this authentication microservice',
+	});
+});
+
+app.use('/api/v1/auth/', authRoutes);
 
 const PORT = config.PORT;
 
