@@ -1,4 +1,5 @@
-const {Schema, mongoose} = require('mongoose');
+const mongoose = require('mongoose');
+const {Schema} = mongoose;
 
 const authSchema = new Schema(
 	{
@@ -34,8 +35,8 @@ const authSchema = new Schema(
 				unique: true,
 			},
 			role: {
-				type: String,
-				default: 'basic',
+				type: Schema.Types.ObjectId,
+				ref: 'Role',
 			},
 		},
 	},

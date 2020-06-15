@@ -2,6 +2,7 @@ const express = require('express');
 const config = require('./src/configs/index');
 const dbConnection = require('./src/configs/dbconfig');
 const authRoutes = require('./src/routes/auth.routes');
+
 const app = express();
 
 //connect to database
