@@ -1,0 +1,20 @@
+version: '2'
+
+services:
+  api-auth:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - '3000:3000'
+    depends_on:
+      - mongo
+    env_file: .env
+  mongo:
+    image: mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - data-volume:/data/db
+volumes:
+  data-volume:
