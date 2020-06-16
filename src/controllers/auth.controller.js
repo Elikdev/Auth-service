@@ -3,14 +3,18 @@ const bcrypt = require('bcryptjs');
 const authModel = require('../models/auth.model');
 const roleModel = require('../models/role.model');
 const config = require('../configs/index');
+const {validationResult} = require('express-validator');
 
 exports.signUp = async (req, res) => {
 	const {app_name, auth_credentials, user_details} = req.body;
+	const errors = validationResult(req);
 	try {
-		//check if the app-name is included
-		if (!app_name) {
+		//get validation results here
+		if (!errors.isEmpty()) {
+			let Errors = [];
+			errors.array().map((err) => Errors.push({[err.param]: err.msg}));
 			return res.status(422).json({
-				message: 'Include the app_name!',
+				Errors,
 			});
 		}
 
@@ -21,27 +25,19 @@ exports.signUp = async (req, res) => {
 			auth_credentials.password = hashedPassword;
 		}
 
-		if (auth_credentials.email && user_details.email) {
-			//check if email is in user detail and do they correlate
-			if (auth_credentials.email != user_details.email) {
-				return res.status(422).json({
-					message: 'email must be the same',
+		//set the role to basic user unless stated otherwise
+		if (user_details.role) {
+			let role = await roleModel.findOne({name: user_details.role});
+			if (!role) {
+				return res.status(404).json({
+					message: 'Role is not found in the database',
 				});
 			}
-			//set the role to basic user unless stated otherwise
-			if (user_details.role) {
-				let role = await roleModel.findOne({name: user_details.role});
-				if (!role) {
-					return res.status(404).json({
-						message: 'Role is not found in the database',
-					});
-				}
+			user_details.role = role._id;
+		} else {
+			role = await roleModel.findOne({name: 'basic'});
+			if (role) {
 				user_details.role = role._id;
-			} else {
-				role = await roleModel.findOne({name: 'basic'});
-				if (role) {
-					user_details.role = role._id;
-				}
 			}
 		}
 
@@ -61,7 +57,7 @@ exports.signUp = async (req, res) => {
 		const user = await details.save();
 
 		return res.status(201).json({
-			message: `User was registered succesfully on ${app_name} app`,
+			message: `Successfully registered user on ${app_name} app`,
 			userId: user._id,
 			username: user.auth_credentials.username,
 			accesstoken: token,
@@ -74,25 +70,19 @@ exports.signUp = async (req, res) => {
 	}
 };
 
-exports.verifyEmail = (req, res) => {};
+// exports.verifyEmail = (req, res) => {};
 
 exports.signIn = async (req, res) => {
 	const {app_name, auth_credentials} = req.body;
-	try {
-		//check if the app-name is included
-		if (!app_name) {
-			return res.status(422).json({
-				message: 'Include the app_name!',
-			});
-		}
+	const errors = validationResult(req);
 
-		//check if app is registered
-		const findApp = await authModel.find({
-			app_name: app_name,
-		});
-		if (findApp.length == 0) {
-			return res.status(404).json({
-				message: 'app has not been registered',
+	try {
+		//grab validation errors
+		if (!errors.isEmpty()) {
+			let Errors = [];
+			errors.array().map((err) => Errors.push({[err.param]: err.msg}));
+			return res.status(422).json({
+				Errors,
 			});
 		}
 
@@ -143,7 +133,7 @@ exports.signIn = async (req, res) => {
 			.select('-__v');
 
 		return res.status(200).json({
-			message: `User successfully signed in on ${app_name} app`,
+			message: `Successfully signed in user on ${app_name} app`,
 			User: user,
 		});
 	} catch (error) {
@@ -153,3 +143,9 @@ exports.signIn = async (req, res) => {
 		});
 	}
 };
+
+// exports.adminCheck = (req, res) => {
+// 	return res.status(200).json({
+// 		message: 'admin content',
+// 	});
+// };
