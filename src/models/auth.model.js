@@ -32,8 +32,8 @@ const authSchema = new Schema(
 				type: String,
 			},
 			role: {
-				type: Schema.Types.ObjectId,
-				ref: 'Role',
+				type: String,
+				default: 'Basic',
 			},
 		},
 	},
