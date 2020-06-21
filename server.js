@@ -4,7 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const dbConnection = require('./src/configs/dbconfig');
 const authRoutes = require('./src/routes/auth.routes');
-const {tokenCheck, isAdmin} = require('./src/middlewares/midleware');
+const {accessToAuthService, userToken} = require('./src/middlewares/midleware');
 
 const app = express();
 
@@ -22,8 +22,8 @@ app.get('/api/v1', (req, res) => {
 	});
 });
 
-// app.use(tokenCheck);
-// app.use(isAdmin);
+app.use(accessToAuthService);
+app.use(userToken);
 
 app.use('/api/v1/auth/', authRoutes);
 

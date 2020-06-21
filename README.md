@@ -30,4 +30,4 @@ To run the microservice as a container with docker
 
 # Documentation
 
-coming soon...
+View the API documentation on postman ([here](https://documenter.getpostman.com/view/9087902/Szzn7wix)) 

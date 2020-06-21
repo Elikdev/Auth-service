@@ -2,12 +2,12 @@ const jwt = require('jsonwebtoken');
 const config = require('../configs/index');
 const routes = require('../constants/routegroup');
 const authModel = require('../models/auth.model');
-const Role = require('../models/role.model');
 
-const tokenCheck = (req, res, next) => {
+const accessToAuthService = async (req, res, next) => {
 	//check if the token is needed for the route being accessed
 	if (!routes.unsecureRoutes.includes(req.path)) {
 		const authHeader = req.headers['authorization'];
+
 		let token;
 
 		if (!authHeader) {
@@ -25,10 +25,18 @@ const tokenCheck = (req, res, next) => {
 		}
 
 		try {
-			const grantAccess = jwt.verify(token, config.JWT_SECRET);
-			req.user = grantAccess;
-			next();
-			return;
+			const grantAccess = await jwt.verify(token, config.JWT_SECRET);
+			req.app = grantAccess;
+
+			//check for expiration
+			if (Math.floor(Date.now() / 1000) <= req.app.exp) {
+				next();
+				return;
+			} else {
+				return res.status(403).json({
+					message: 'Token has expired. you need to register for a new one',
+				});
+			}
 		} catch (error) {
 			console.log(`JWT verification error >>> ${error.message}`);
 			res.status(403).json({
@@ -40,40 +48,44 @@ const tokenCheck = (req, res, next) => {
 	}
 };
 
-const isAdmin = async (req, res, next) => {
-	try {
-		if (routes.adminOnlyRoutes.includes(req.path)) {
-			if (req.user) {
-				id = req.user.userId;
-				const userInfo = await authModel.findById(id);
+const userToken = async (req, res, next) => {
+	if (routes.secureAuthRoues.includes(req.path)) {
+		const userToken = req.headers['user-token'];
+		let decodedToken;
 
-				if (userInfo) {
-					const checkRole = await Role.findOne({
-						_id: userInfo.user_details.role,
-					});
-
-					if (checkRole.name == 'admin') {
-						next();
-						return;
-					} else {
-						return res.status(403).json({
-							message: 'Access denied... require admin role',
-						});
-					}
-				}
-			}
-		} else {
-			next();
+		if (!userToken) {
+			return res.status(412).json({
+				message: 'Access denied!!! Missing credentials',
+			});
 		}
-	} catch (error) {
-		console.log(`Error in authorization >>> ${error.message}`);
-		res.status(500).json({
-			message: 'Something went wrong. Please try again...',
-		});
+		//separate the Bearer from the string if it exists
+		const separateBearer = userToken.split(' ');
+		if (separateBearer.includes('Bearer')) {
+			decodedToken = separateBearer[1];
+		} else {
+			decodedToken = userToken;
+		}
+
+		try {
+			const allowAccess = await jwt.verify(decodedToken, config.JWT_SECRET);
+
+			if (allowAccess) {
+				req.user = allowAccess;
+				next();
+				return;
+			}
+		} catch (error) {
+			console.log(`JWT verification error >>> ${error.message}`);
+			return res.status(403).json({
+				message: 'Something went wrong. Please try again..',
+			});
+		}
+	} else {
+		next();
 	}
 };
 
 module.exports = {
-	tokenCheck,
-	isAdmin,
+	accessToAuthService,
+	userToken,
 };

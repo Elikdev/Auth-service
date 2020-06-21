@@ -1,9 +1,22 @@
 const {check, body} = require('express-validator');
 const authModel = require('../models/auth.model');
+const App = require('../models/apps_registered');
+
+const appRegistration = () => {
+	return [
+		check('app_name', 'Include the app name').notEmpty(),
+		body('app_name').custom((value) => {
+			return App.findOne({name: value}).then((app) => {
+				if (app) {
+					return Promise.reject('App has been registered before');
+				}
+			});
+		}),
+	];
+};
 
 const userSignUpValidationRules = () => {
 	return [
-		check('app_name', 'Include the app name').notEmpty(),
 		check(
 			'auth_credentials',
 			'Include the authentication credentials'
@@ -19,7 +32,7 @@ const userSignUpValidationRules = () => {
 				}
 				return authModel
 					.findOne({
-						app_name: req.body.app_name,
+						app_name: req.app.app_name,
 						'auth_credentials.email': value,
 					})
 					.then((user) => {
@@ -33,7 +46,7 @@ const userSignUpValidationRules = () => {
 			.custom((value, {req}) => {
 				return authModel
 					.findOne({
-						app_name: req.body.app_name,
+						app_name: req.app.app_name,
 						'auth_credentials.username': value,
 					})
 					.then((user) => {
@@ -47,17 +60,16 @@ const userSignUpValidationRules = () => {
 
 const userSignInValidationRules = () => {
 	return [
-		check('app_name', 'Include the app name').notEmpty(),
 		check(
 			'auth_credentials',
 			'Include the authentication credentials'
 		).notEmpty(),
 		check('auth_credentials.password', 'password cannot be empty').notEmpty(),
-		body('app_name').custom((value) => {
-			return authModel.find({app_name: value}).then((app) => {
+		body('app_name').custom((value, {req}) => {
+			return authModel.find({app_name: req.app.app_name}).then((app) => {
 				if (app.length == 0) {
 					return Promise.reject(
-						`${value} does not use this service.. try and register the user`
+						`${req.app.app_name} does not use this service.. try and register the user`
 					);
 				}
 			});
@@ -67,13 +79,13 @@ const userSignInValidationRules = () => {
 			.custom((value, {req}) => {
 				return authModel
 					.findOne({
-						app_name: req.body.app_name,
+						app_name: req.app.app_name,
 						'auth_credentials.email': value,
 					})
 					.then((user) => {
 						if (user) {
 							return Promise.reject(
-								`Invalid email... user is not registered on ${req.body.app_name}`
+								`Invalid email... user is not registered on ${req.app.app_name}`
 							);
 						}
 					});
@@ -83,13 +95,13 @@ const userSignInValidationRules = () => {
 			.custom((value, {req}) => {
 				return authModel
 					.findOne({
-						app_name: req.body.app_name,
+						app_name: req.app.app_name,
 						'auth_credentials.username': value,
 					})
 					.then((user) => {
 						if (!user) {
 							return Promise.reject(
-								`Invalid username... user is not registered on ${req.body.app_name}`
+								`Invalid username... user is not registered on ${req.app.app_name}`
 							);
 						}
 					});
@@ -98,6 +110,7 @@ const userSignInValidationRules = () => {
 };
 
 module.exports = {
+	appRegistration,
 	userSignUpValidationRules,
 	userSignInValidationRules,
 };
